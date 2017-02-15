@@ -19,6 +19,45 @@ def affine_relu_forward(x, w, b):
   cache = (fc_cache, relu_cache)
   return out, cache
 
+def affine_batchnorm_relu_forward(x, w, b, gamma, beta, bn_param):
+  """
+  Convenience layer that performs an affine transform followed by a BatchNormalization
+  and a ReLU
+
+  Inputs:
+  - x: Input to the affine layer
+  - w, b: Weights for the affine layer
+  - gamma
+  - beta
+  - bn_param: Dictionary with the following keys:
+    - mode: 'train' or 'test'; required
+    - eps: Constant for numeric stability
+    - momentum: Constant for running mean / variance.
+    - running_mean: Array of shape (D,) giving running mean of features
+    - running_var Array of shape (D,) giving running variance of features
+
+  Returns a tuple of:
+  - out: Output from the ReLU
+  - cache: Object to give to the backward pass
+  """
+    
+  a, fc_cache = affine_forward(x, w, b)
+  out_batch, batch_cache = batchnorm_forward(a, gamma, beta, bn_param) 
+  out, relu_cache = relu_forward(out_batch)
+  cache = (fc_cache, batch_cache, relu_cache)
+  return out, cache
+
+def affine_batchnorm_relu_backward(dout, cache):
+  """
+  Backward pass for the affine-norm-relu convenience layer
+  """
+
+  fc_cache, batch_cache, relu_cache = cache
+  drelu = relu_backward(dout, relu_cache)
+  dnorm, dgamma, dbeta = batchnorm_backward(drelu, batch_cache)
+  dx, dw, db = affine_backward(dnorm, fc_cache)
+  return dx, dw, db, dgamma, dbeta
+
 
 def affine_relu_backward(dout, cache):
   """
