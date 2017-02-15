@@ -20,7 +20,6 @@ def svm_loss_naive(W, X, y, reg):
   - gradient with respect to weights W; an array of same shape as W
   """
   dW = np.zeros(W.shape) # initialize the gradient as zero
-
   # compute the loss and the gradient
   num_classes = W.shape[1]
   num_train = X.shape[0]
@@ -28,20 +27,35 @@ def svm_loss_naive(W, X, y, reg):
   for i in xrange(num_train):
     scores = X[i].dot(W)
     correct_class_score = scores[y[i]]
+    
+    # Number of positive margin
+    num_positive_margin = 0.0
+    
+    #Gradient of L_i
+    dLi = np.zeros(W.shape)
     for j in xrange(num_classes):
+      
       if j == y[i]:
         continue
+        
       margin = scores[j] - correct_class_score + 1 # note delta = 1
       if margin > 0:
         loss += margin
-
+        dLi[:,j] = X[i,:]
+        num_positive_margin += 1.0
+        
+    dLi[:,y[i]] = - num_positive_margin * X[i]
+    dW += dLi
+    
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
 
   # Add regularization to the loss.
   loss += 0.5 * reg * np.sum(W * W)
-
+  
+  dW = (1.0/num_train) * dW + reg * W 
+    
   #############################################################################
   # TODO:                                                                     #
   # Compute the gradient of the loss function and store it dW.                #
@@ -69,7 +83,24 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  #compute all the scores
+  scores = X.dot(W)
+  
+  marginVal = 1
+  # Extract the scores of the correct class  
+  #correct_class_score = np.choose(y,scores.T)
+  
+  sequence =  np.array(range(X.shape[0]))
+  correct_class_score = scores[sequence, y]
+    
+  margins = np.maximum(0, scores.T - correct_class_score + marginVal)  
+  margins[y, sequence] = 0
+    
+  # Sum over the classes
+  loss = np.sum(margins,axis=0)
+  loss = np.mean(loss)
+  loss += reg * 0.5 * np.sum(W * W)
+    
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -84,7 +115,16 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  
+  margins = np.where(margins > 0, 1, 0)
+  margins[y, np.arange(0, scores.shape[0])] = -1 * np.sum(margins, 0)
+  dW = np.dot(margins, X)
+
+  dW /= X.shape[0]
+  
+  dW += reg * W.T
+  dW = dW.T 
+  #pass
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
